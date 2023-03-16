@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<script type="text/javascript" src="lib/moment/moment.min.js"></script>
+</head>
+<body>
+	<input type="file" name="file" id="file" accept=".csv">
+	<div id='output'>
+	  
+	</div>
+
+</body>
+
+<script type="text/javascript">
+		  const $output = document.getElementById('output')
+		  document.getElementById('file').onchange = function() {
+		  var file = this.files[0];
+
+		  var reader = new FileReader();
+		  reader.onload = function(progressEvent) {
+		    const text = this.result;
+		    $output.innerText = text
+
+		    var newArrEmp = new Array();
+		    newArrEmp = text.split('\n');
+		    var newArrEmpNew;
+
+		    var newArrEmpSplit = new Array();
+		    var tempArr = new Array();
+		    var c = 0;
+		    var rExpr = /^\+?(0|[1-9]\d*)$/; //positive integers regex
+		    var orgArr = new Array();
+		    //let prjctId = {};
+		    var newArr = new Array();
+		    var counter = 0;
+
+
+		    for (var line = 0; line < newArrEmp.length; line++) {
+
+		       tempArr = newArrEmp[line].split(',');
+
+		       
+		       if( rExpr.test(tempArr[1]) && rExpr.test(tempArr[2]) && ( moment(tempArr[3].trim()).isValid() ) && ( moment(tempArr[4].trim()).isValid() || (tempArr[4].trim().toLowerCase() == 'null') ) ) //valid dates and integers
+		       {
+
+		       	tempArr[3] = moment(tempArr[3].trim()).format('YYYY-MM-DD');
+		       	if(tempArr[4].trim().toLowerCase() == 'null'){
+		       		tempArr[4] = moment().format('YYYY-MM-DD');	
+		       	}else{
+		       		tempArr[4] = moment(tempArr[4].trim()).format('YYYY-MM-DD');
+		       	} 
+
+		       	
+		       	newArr[counter] = [tempArr[1], tempArr[2], tempArr[3], tempArr[4]]; //new array only of valid values and dates in the right format
+		       	counter = counter +1;
+
+
+		       }
+
+		    }
+
+				const
+				  oneDay  = 24 * 60 * 60 * 1000 
+				, setDate = YMD =>
+				    {
+				    let [Y,M,D] = YMD.split('-').map(Number)
+				    return new Date(Y,--M,D)
+				    }
+
+
+				const empProjects = newArr.reduce( (r,[empId, idProject, dateIn, dateOut])=>
+				  {
+				  let stD = setDate(dateIn)
+				    , enD = dateOut ? setDate(dateOut) :  new Date()
+				  r[idProject] = r[idProject] ?? []
+				  r[idProject].push({empId,stD,enD})
+				  return r
+				  }, {})
+
+				let combs = {}
+				for (let proj in empProjects) 
+				for (let i = 0; i < empProjects[proj].length - 1; i++) 
+				for (let j = i + 1; j < empProjects[proj].length; j++) 
+				  {
+				  let fEmp = empProjects[proj][i]
+				  let sEmp = empProjects[proj][j]
+
+				  if (( fEmp.enD <= sEmp.enD && fEmp.enD > sEmp.stD )
+				    ||( sEmp.enD <= fEmp.enD && sEmp.enD > fEmp.stD )
+				    ){
+				    let 
+				      D1   = fEmp.stD > sEmp.stD ? fEmp.stD : sEmp.stD
+				    , D2   = fEmp.enD < sEmp.enD ? fEmp.enD : sEmp.enD
+				    , days = Math.ceil((D2 - D1) / oneDay)
+				    , key  = `${fEmp.empId}-${sEmp.empId}`
+				      ;
+				    combs[key] = combs[key] ?? { fEmp: fEmp.empId, sEmp: sEmp.empId, elapsed:0, proj: Number(proj) }
+				    combs[key].elapsed += days
+				    }
+				  } 
+				 
+				let Result  =  
+				  Object.entries(combs)
+				  .sort((a,b)=> b[1].elapsed - a[1].elapsed )
+				  .map(([k,v])=>v)
+
+				var show = Result.forEach(el => alert( JSON.stringify(el).replaceAll('"',''))) //visualize data via the alert box
+						    
+
+		  };
+		  reader.readAsText(file); //print the original file
+		};
+		
+
+</script>
+</html>
